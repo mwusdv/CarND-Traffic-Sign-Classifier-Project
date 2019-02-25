@@ -82,7 +82,7 @@ def augment_data(X, y):
                 src = np.array([[5, 5], [5, 15], [15, 5]], dtype=np.float32)
                 dst = np.copy(src)
                 for p in range(3):
-                    delta = np.random.randint(-2, 2, 2)
+                    delta = np.random.randint(-1, 1, 2)
                     dst[p] += delta
                 
                 I = transorm_image(X[seed_indices[n]], angle_degree, scale, tx, ty , src, dst)

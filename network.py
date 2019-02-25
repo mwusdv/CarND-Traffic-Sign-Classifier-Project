@@ -70,7 +70,7 @@ class TrafficSignNet:
                 
                 # pooling
                 if layer['pooling']:
-                    x = max_pool2d(x, kernel_size=2, stride=2, padding='VALID')
+                    x = max_pool2d(x, kernel_size=2, stride=2, padding=layer['padding'])
                     
                 # dropout
                 if layer['keep_prob'] > 0 and layer['keep_prob'] < 1.0:
