@@ -9,6 +9,68 @@ Created on Sun Feb 24 16:05:53 2019
 import tensorflow as tf
 from tensorflow.contrib.layers import flatten, conv2d, l2_regularizer, max_pool2d, fully_connected, dropout
 
+def lenet_plus(x, n_classes, param):
+    # conv layers
+    conv_output = []
+    for cl in param.conv_layers:
+        x = conv2d(x, num_outputs=cl[1], kernel_size=cl[0], stride=1, 
+                   weights_regularizer=l2_regularizer(param.l2),
+                   activation_fn=tf.nn.relu, padding='VALID')
+        
+        # pooling
+        if cl[2]:
+            x = max_pool2d(x, kernel_size=2, stride=2, padding='VALID')
+            
+        # dropout
+        if cl[3] > 0 and cl[3] < 1.0:
+            x = dropout(x, keep_prob=cl[3])
+            
+        # go to fully connected layers
+        if cl[4]:
+            conv_output.append(flatten(x))
+            
+    # flatten
+    x = tf.concat(conv_output, axis=1)
+    
+    # fully connected layers
+    for fl in param.fc_layers:
+        x = fully_connected(x, fl, 
+                            weights_regularizer=l2_regularizer(param.l2), 
+                            activation_fn=tf.nn.relu)
+        x = dropout(x, keep_prob=param.keep_prob)
+    
+    # output layer
+    x = fully_connected(x, num_outputs=n_classes, 
+                        weights_regularizer=l2_regularizer(param.l2),
+                        activation_fn=None)
+    
+    return x
+
+# basic lenet with regularization
+def reg_lenet(x, n_classes, param):
+    # conv layers
+    for cl in param.conv_layers:
+        x = conv2d(x, num_outputs=cl[1], kernel_size=cl[0], stride=1, 
+                   weights_regularizer=l2_regularizer(param.l2),
+                   activation_fn=tf.nn.relu, padding='VALID')
+    
+        x = max_pool2d(x, kernel_size=2, stride=2, padding='VALID')
+    
+    # fully connected layers
+    x = flatten(x)
+    for fl in param.fc_layers:
+        x = fully_connected(x, fl, 
+                            weights_regularizer=l2_regularizer(param.l2), 
+                            activation_fn=tf.nn.relu)
+        x = dropout(x, keep_prob=param.keep_prob)
+    
+    # output layer
+    x = fully_connected(x, num_outputs=n_classes, 
+                        weights_regularizer=l2_regularizer(param.l2),
+                        activation_fn=None)
+    
+    return x
+
 def basic_lenet(x, n_classes, keep_prob):    
     # Hyperparameters
     mu = 0

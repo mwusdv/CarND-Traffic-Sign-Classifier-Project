@@ -59,6 +59,7 @@ def augment_data(X, y):
     
     # augment data, such that each class has N samples
     N = np.max(class_size)
+    N = int(N*1.5)
     
     X_aug = []
     y_aug = []
