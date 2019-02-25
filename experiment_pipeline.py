@@ -17,7 +17,7 @@ import network
 class TrainParam:
     def __init__(self):
         self._n_epochs = 100
-        self._batch_size = 256
+        self._batch_size = 512
         self._learning_rate = 1e-3
         self._momentum = 0.9
        
@@ -43,7 +43,7 @@ class TrainParam:
                               'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True}]
          
         # fully connected layers
-        self._fc_layers = [{'hidden_dim': 1024, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True}]
+        self._fc_layers = [{'hidden_dim': 512, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True}]
         
 def data_pipeline():
     # load data
