@@ -59,7 +59,7 @@ def augment_data(X, y):
     
     # augment data, such that each class has N samples
     N = np.max(class_size)
-    N = int(N*1.5)
+    N = int(N*1.8)
     
     X_aug = []
     y_aug = []
@@ -76,13 +76,13 @@ def augment_data(X, y):
             # transform selected images
             for n in range(len(seed_indices)):
                 
-                angle_degree = np.random.uniform(-5, 5)
+                angle_degree = np.random.uniform(-10, 10)
                 scale = np.random.uniform(0.9, 1.1)
                 tx, ty = np.random.uniform(-3, 3, 2)
                 src = np.array([[5, 5], [5, 15], [15, 5]], dtype=np.float32)
                 dst = np.copy(src)
                 for p in range(3):
-                    delta = np.random.randint(-1, 1, 2)
+                    delta = np.random.randint(-2, 2, 2)
                     dst[p] += delta
                 
                 I = transorm_image(X[seed_indices[n]], angle_degree, scale, tx, ty , src, dst)
