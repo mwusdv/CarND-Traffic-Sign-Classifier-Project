@@ -15,7 +15,7 @@ def lenet_plus(x, n_classes, param):
     for cl in param.conv_layers:
         x = conv2d(x, num_outputs=cl[1], kernel_size=cl[0], stride=1, 
                    weights_regularizer=l2_regularizer(param.l2),
-                   activation_fn=tf.nn.relu, padding='VALID')
+                   activation_fn=cl[5], padding='VALID')
         
         # pooling
         if cl[2]:

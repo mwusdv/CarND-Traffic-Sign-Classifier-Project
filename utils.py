@@ -121,35 +121,12 @@ def one_hot_encode(y):
     oh = np.eye(n_classes)[y]
     
     return oh
-    
+
 # load data
-def load_data():
-    training_file = './data/train.p'
-    validation_file= './data/valid.p'
-    testing_file = './data/test.p'
+def load_data(data_fname):
+    fd = open(data_fname, 'rb')
+    data = pickle.load(fd)
+    fd.close()
     
-    with open(training_file, mode='rb') as f:
-        train = pickle.load(f)
-    with open(validation_file, mode='rb') as f:
-        valid = pickle.load(f)
-    with open(testing_file, mode='rb') as f:
-        test = pickle.load(f)
-        
-    X_train, y_train = train['features'], train['labels']
-    X_valid, y_valid = valid['features'], valid['labels']
-    X_test, y_test = test['features'], test['labels']
-    
-    return X_train, y_train, X_valid, y_valid, X_test, y_test
-
-# data process pipeline
-def data_process(X_train, y_train, X_valid, y_valid, X_test, y_test):
-    # data augmentation
-    X_train, y_train = augment_data(X_train, y_train)
-    
-    # pre-process
-    X_train = np.array([pre_process(X_train[i]) for i in range(len(X_train))], dtype=np.float32)
-    X_valid = np.array([pre_process(X_valid[i]) for i in range(len(X_valid))], dtype=np.float32)
-    X_test = np.array([pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
-
-    
-    return X_train, y_train, X_valid, y_valid, X_test, y_test
+    X, y = data['features'], data['labels']
+    return X, y
