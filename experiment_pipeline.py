@@ -28,8 +28,11 @@ class TrainParam:
         
         # pre-processing layers
         #  kernel size, n_kernels, pooling, dropout, go to fc, activation_fn, padding, batch norm
-        self._pre_prop_layers = [[3, 8, False, 1.0, False, tf.nn.relu, 'SAME'],
-                                [1, 8, False, 1.0, False, tf.nn.relu, 'SAME']]
+        self._pre_prop_layers = [{'kernel': [3, 8], 'pooling': True, 'keep_prob': 1.0, 
+                                  'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True},
+                                 
+                                {'kernel': [1, 8], 'pooling': True, 'keep_prob': 1.0, 
+                                 'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True}]
         # conv layers: 
         # kernel size, n_kernels, pooling, dropout, go to fc, activation_fn, padding
         self._conv_layers0 = [[5, 32, False, 1.0, False, tf.nn.relu],
@@ -38,14 +41,34 @@ class TrainParam:
                             [5, 64, True, 0.5, True, tf.nn.relu]]
         
      
-        self._conv_layers = [[5, 32, True, 1.0, True, tf.nn.relu, 'SAME', True],
-                            [5, 64, True, 0.9, True, tf.nn.relu, 'SAME', True], 
-                            [5, 128, True, 0.8, True, tf.nn.relu, 'SAME', True]]
+        conv_layers_1 = [[3, 32, True, 1.0, True, tf.nn.relu, 'SAME', True],
+                        [3, 64, True, 0.9, True, tf.nn.relu, 'SAME', True], 
+                        [3, 128, True, 0.8, True, tf.nn.relu, 'SAME', True]]
+        
+        conv_layers_2 = [[5, 32, True, 1.0, True, tf.nn.relu, 'SAME', True],
+                        [5, 64, True, 0.9, True, tf.nn.relu, 'SAME', True], 
+                        [5, 128, True, 0.8, True, tf.nn.relu, 'SAME', True]]
                             
+        
+        conv_layers_3 = [[7, 32, True, 1.0, True, tf.nn.relu, 'SAME', True],
+                        [7, 64, True, 0.9, True, tf.nn.relu, 'SAME', True], 
+                        [7, 128, True, 0.8, True, tf.nn.relu, 'SAME', True]]
+        
+        self._conv_channels = [conv_layers_2, conv_layers_3]
+        
+        self._conv_layers = [{'kernel': [[3, 16], [5, 16], [7, 16]], 'pooling': True, 'keep_prob': 1.0, 
+                              'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True},
+        
+                            {'kernel': [[3, 32], [5, 32], [7, 32]], 'pooling': True, 'keep_prob': 0.9, 
+                              'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True},
+        
+                            {'kernel': [[3, 64], [5, 64], [7, 64]], 'pooling': True, 'keep_prob': 1.0, 
+                              'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True}]
+        
         
         # fully connected layers
         # hidden_dim, dropout, activation_fn, batch_norm
-        self._fc_layers = [[1024, 0.5, tf.nn.relu, True]]
+        self._fc_layers = [{'hidden_dim': 1024, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True}]
         
 def data_pipeline():
     # load data

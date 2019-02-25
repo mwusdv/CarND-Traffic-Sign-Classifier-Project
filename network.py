@@ -21,39 +21,72 @@ class TrafficSignNet:
     def logits(self, x):
         # pre-processing layers
         for layer in self._param._pre_prop_layers:
-            x = conv2d(x, num_outputs=layer[1], kernel_size=layer[0], stride=1, 
-                       weights_regularizer=l2_regularizer(self._param._l2),
-                       activation_fn=layer[5], 
-                       padding=layer[6])
-            
-        # conv layers
-        conv_output = []
-        for layer in self._param._conv_layers:
             # batch norm
-            if layer[7]:
+            if layer['batch_norm']:
                 bn = batch_norm
                 bn_params = {'center':True, 'scale':True, 'is_training':self._is_training}
             else:
                 bn = None
                 bn_params = None
                 
-            x = conv2d(x, num_outputs=layer[1], kernel_size=layer[0], stride=1, 
+            kn = layer['kernel']
+            kernel_size = kn[0]
+            num_outputs = kn[1]
+            
+            x = conv2d(x, num_outputs=num_outputs, kernel_size=kernel_size, stride=1, 
                        weights_regularizer=l2_regularizer(self._param._l2),
-                       activation_fn=layer[5], padding=layer[6],
+                       activation_fn=layer['activation_fn'], padding=layer['padding'],
                        normalizer_fn=bn, 
                        normalizer_params=bn_params)
+        
+        # conv channels
+        conv_output = []
+        prev_x = x
+        for layer in self._param._conv_layers:
+            # batch norm
+            if layer['batch_norm']:
+                bn = batch_norm
+                bn_params = {'center':True, 'scale':True, 'is_training':self._is_training}
+            else:
+                bn = None
+                bn_params = None
+                
+            # convlution with  each kernel size
+            layer_output = []
+            for kn in layer['kernel']:
+                # get output from the previous layer
+                x = prev_x
+                
+                # conv kernel
+                kernel_size = kn[0]
+                num_outputs = kn[1]
+                
+                # convlutions
+                x = conv2d(x, num_outputs=num_outputs, kernel_size=kernel_size, stride=1, 
+                           weights_regularizer=l2_regularizer(self._param._l2),
+                           activation_fn=layer['activation_fn'], padding=layer['padding'],
+                           normalizer_fn=bn, 
+                           normalizer_params=bn_params)
+                
+                # pooling
+                if layer['pooling']:
+                    x = max_pool2d(x, kernel_size=2, stride=2, padding=layer['padding'])
+                    
+                # dropout
+                if layer['keep_prob'] > 0 and layer['keep_prob'] < 1.0:
+                    x = dropout(x, keep_prob=layer['keep_prob'], is_training=self._is_training)
+                    
+                # record output with current kernel size
+                layer_output.append(x)
             
-            # pooling
-            if layer[2]:
-                x = max_pool2d(x, kernel_size=2, stride=2, padding=layer[6])
-                
-            # dropout
-            if layer[3] > 0 and layer[3] < 1.0:
-                x = dropout(x, keep_prob=layer[3], is_training=self._is_training)
-                
+            x = tf.concat(layer_output, axis=3)
+            
             # go to fully connected layers
-            if layer[4]:
+            if layer['go_to_fc']:
                 conv_output.append(flatten(x))
+                
+            # go to next layer
+            prev_x = x
                 
         # flatten
         x = tf.concat(conv_output, axis=1)
@@ -61,21 +94,21 @@ class TrafficSignNet:
         # fully connected layers
         for layer in self._param._fc_layers:
             # batch norm
-            if layer[3]:
+            if layer['batch_norm']:
                 bn = batch_norm
                 bn_params = {'center':True, 'scale':True, 'is_training':self._is_training}
             else:
                 bn = None
                 bn_params = None
                 
-            x = fully_connected(x, layer[0], 
+            x = fully_connected(x, layer['hidden_dim'], 
                                 weights_regularizer=l2_regularizer(self._param._l2), 
-                                activation_fn=layer[2],
+                                activation_fn=layer['activation_fn'],
                                 normalizer_fn=bn, 
                                 normalizer_params=bn_params)
             
             
-            x = dropout(x, keep_prob=layer[1], is_training=self._is_training)
+            x = dropout(x, keep_prob=layer['keep_prob'], is_training=self._is_training)
         
         # output layer
         x = fully_connected(x, num_outputs=self._n_classes, 
