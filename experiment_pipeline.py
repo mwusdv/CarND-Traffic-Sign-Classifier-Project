@@ -19,6 +19,7 @@ class TrainParam:
         self._n_epochs = 100
         self._batch_size = 256
         self._learning_rate = 1e-3
+        self._momentum = 0.9
        
         self._aug_data_period = 10
         
@@ -115,8 +116,8 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
         # Ensures that we execute the update_ops before performing the train_step
-        train_op = tf.train.AdamOptimizer(learning_rate=param._learning_rate).minimize(_loss)
-    
+        #train_op = tf.train.AdamOptimizer(learning_rate=param._learning_rate).minimize(_loss)
+        train_op = tf.train.RMSPropOptimizer(learning_rate=param._learning_rate, momentum=param._momentum).minimize(_loss)
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     
@@ -170,7 +171,8 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
             best_test = test_accuracy
             best_test_valid = valid_accuracy
         
-        print('epoch: ', epoch, ' loss: ', epoch_loss, ' valid accuracy: ', valid_accuracy, ' test accuracy: ', test_accuracy)
+        print('epoch: ', epoch, ' loss: ', epoch_loss, ' valid accuracy: ', valid_accuracy, \
+              ' test accuracy: ', test_accuracy)
     
     sess.close()
     print('best valid: ', best_valid, ' best valid test: ', best_valid_test)
