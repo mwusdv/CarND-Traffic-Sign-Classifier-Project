@@ -7,7 +7,7 @@ Created on Sun Feb 24 16:05:53 2019
 """
 
 import tensorflow as tf
-from tensorflow.contrib.layers import flatten, conv2d, l2_regularizer, max_pool2d, fully_connected, dropout
+from tensorflow.contrib.layers import flatten, conv2d, l2_regularizer, max_pool2d, fully_connected, dropout, batch_norm
 
 class TrafficSignNet:
     def __init__(self, n_classes, param):
@@ -23,14 +23,25 @@ class TrafficSignNet:
         for layer in self._param._pre_prop_layers:
             x = conv2d(x, num_outputs=layer[1], kernel_size=layer[0], stride=1, 
                        weights_regularizer=l2_regularizer(self._param._l2),
-                       activation_fn=layer[5], padding=layer[6])
+                       activation_fn=layer[5], 
+                       padding=layer[6])
             
         # conv layers
         conv_output = []
         for layer in self._param._conv_layers:
+            # batch norm
+            if layer[7]:
+                bn = batch_norm
+                bn_params = {'center':True, 'scale':True, 'is_training':self._is_training}
+            else:
+                bn = None
+                bn_params = None
+                
             x = conv2d(x, num_outputs=layer[1], kernel_size=layer[0], stride=1, 
                        weights_regularizer=l2_regularizer(self._param._l2),
-                       activation_fn=layer[5], padding=layer[6])
+                       activation_fn=layer[5], padding=layer[6],
+                       normalizer_fn=bn, 
+                       normalizer_params=bn_params)
             
             # pooling
             if layer[2]:
@@ -49,9 +60,20 @@ class TrafficSignNet:
         
         # fully connected layers
         for layer in self._param._fc_layers:
+            # batch norm
+            if layer[3]:
+                bn = batch_norm
+                bn_params = {'center':True, 'scale':True, 'is_training':self._is_training}
+            else:
+                bn = None
+                bn_params = None
+                
             x = fully_connected(x, layer[0], 
                                 weights_regularizer=l2_regularizer(self._param._l2), 
-                                activation_fn=layer[2])
+                                activation_fn=layer[2],
+                                normalizer_fn=bn, 
+                                normalizer_params=bn_params)
+            
             
             x = dropout(x, keep_prob=layer[1], is_training=self._is_training)
         

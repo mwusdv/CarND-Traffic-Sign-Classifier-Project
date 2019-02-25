@@ -26,7 +26,7 @@ class TrainParam:
         self._l2 = 0.01
         
         # pre-processing layers
-        #  kernel size, n_kernels, pooling, dropout, go to fc, activation_fn, padding
+        #  kernel size, n_kernels, pooling, dropout, go to fc, activation_fn, padding, batch norm
         self._pre_prop_layers = [[3, 8, False, 1.0, False, tf.nn.relu, 'SAME'],
                                 [1, 8, False, 1.0, False, tf.nn.relu, 'SAME']]
         # conv layers: 
@@ -37,13 +37,14 @@ class TrainParam:
                             [5, 64, True, 0.5, True, tf.nn.relu]]
         
      
-        self._conv_layers = [[5, 32, True, 1.0, True, tf.nn.relu, 'SAME'],
-                            [5, 64, True, 0.9, True, tf.nn.relu, 'SAME'], 
-                            [5, 128, True, 0.8, True, tf.nn.relu, 'SAME']]
+        self._conv_layers = [[5, 32, True, 1.0, True, tf.nn.relu, 'SAME', True],
+                            [5, 64, True, 0.9, True, tf.nn.relu, 'SAME', True], 
+                            [5, 128, True, 0.8, True, tf.nn.relu, 'SAME', True]]
                             
         
         # fully connected layers
-        self._fc_layers = [[1024, 0.5, tf.nn.relu]]
+        # hidden_dim, dropout, activation_fn, batch_norm
+        self._fc_layers = [[1024, 0.5, tf.nn.relu, True]]
         
 def data_pipeline():
     # load data
@@ -110,7 +111,11 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     # loss and optimizer
     ce = tf.nn.softmax_cross_entropy_with_logits_v2(logits=_logits, labels=_y)
     _loss = tf.reduce_mean(ce)
-    train_op = tf.train.AdamOptimizer(learning_rate=param._learning_rate).minimize(_loss)
+    
+    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    with tf.control_dependencies(update_ops):
+        # Ensures that we execute the update_ops before performing the train_step
+        train_op = tf.train.AdamOptimizer(learning_rate=param._learning_rate).minimize(_loss)
     
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
