@@ -20,7 +20,7 @@ class TrafficSignNet:
         self._y = tf.placeholder(dtype=tf.uint8, shape=[None, n_classes])    
       
         # logits and predictions
-        self._logits = self.logits(self._X)
+        self._logits = self.logits()
         self._preds = tf.argmax(self._logits, axis=1)
     
         # loss
@@ -30,7 +30,9 @@ class TrafficSignNet:
     def set_training(self, flag):
         self._is_training = flag
         
-    def logits(self, x):
+    def logits(self):
+        x = self._X
+        
         # pre-processing layers
         for layer in self._param._pre_prop_layers:
             # batch norm

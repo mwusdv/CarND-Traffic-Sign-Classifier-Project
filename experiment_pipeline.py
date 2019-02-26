@@ -10,19 +10,23 @@ import tensorflow as tf
 import numpy as np
 from sklearn.utils import shuffle
 import datetime
-import os
 
 import utils
 import network
 
-class TrainParam:
+class ExperimentParam:
     def __init__(self):
         self._n_epochs = 100
         self._batch_size = 512
-        self._learning_rate = 5e-4
+        self._learning_rate = 1.5e-3
         self._momentum = 0.9
        
         self._aug_data_period = 20
+        
+        # data augmentation
+        self._affine_aug_ratio = 2.5
+        self._num_gamma_aug = 200
+        self._gammas = [0.1, 5.0]
         
         # regularization
         self._l2 = 0.01
@@ -54,7 +58,7 @@ class TrainParam:
         self._n_cols = 0
         self._n_channels = 0
         
-def data_pipeline():
+def data_pipeline(param):
     # load data
     X_train, y_train = utils.load_data('./data/train.p')
     X_valid, y_valid = utils.load_data('./data/valid.p')
@@ -72,7 +76,7 @@ def data_pipeline():
     print("Number of classes =", n_classes)
 
     # data augmentation
-    X_train, y_train = utils.augment_data(X_train, y_train)
+    X_train, y_train = utils.augment_data(X_train, y_train, param)
     n_train = len(X_train)    
     print("Number of augmented training examples =", n_train)
     
@@ -83,12 +87,12 @@ def data_pipeline():
 
     return X_train, y_train, X_valid, y_valid, X_test, y_test
 
-def gen_new_train():
+def gen_new_train(param):
     # load data
     X_train, y_train = utils.load_data('./data/train.p')
     
     # data augmentation
-    X_train, y_train = utils.augment_data(X_train, y_train)
+    X_train, y_train = utils.augment_data(X_train, y_train, param)
     
     # pre-process
     X_train = np.array([utils.pre_process(X_train[i]) for i in range(len(X_train))], dtype=np.float32)
@@ -133,7 +137,7 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
         # re-autment data periodically
         if epoch > 0 and epoch % param._aug_data_period == 0:
             print('re-augment data')
-            X_train, y_train, oh_y_train = gen_new_train()
+            X_train, y_train, oh_y_train = gen_new_train(param)
         
         X_train, oh_y_train = shuffle(X_train, oh_y_train)
            
@@ -186,10 +190,16 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
 def show_bad_cases(test_fname, param):
     # load test data
     X_test, y_test = utils.load_data(test_fname)
-    X_test = np.array([utils.pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
+    X_test_normed = np.array([utils.pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
+    
+    n_data, n_rows, n_cols, n_channels = X_test.shape
+    param._n_rows = n_rows
+    param._n_cols = n_cols
+    param._n_channels = n_channels
     
     # load model
     n_classes = int(np.max(y_test) + 1)
+    tf.reset_default_graph()
     net = network.TrafficSignNet(n_classes, param)
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
@@ -199,22 +209,36 @@ def show_bad_cases(test_fname, param):
     net.set_training(False)
     
     # test
-    preds_test = sess.run(net._preds, {net._X:X_test})
-    err_indices = np.where(preds_test != y_test)
+    preds_test = sess.run(net._preds, {net._X:X_test_normed})
+    test_accuracy = utils.classification_accuracy(y_test, preds_test)
+    print('test accuracy: ', test_accuracy)
+    sess.close()
+    X_test_normed = None
     
-    utils.show_images(X_test, y_test, err_indices, n_cols=10, num_images=200)
+    # show test images that are not correctly classified
+    err_indices = np.where(preds_test != y_test)[0]
+    utils.show_images(X_test, y_test, err_indices, n_cols=5, num_images=200, preds=preds_test)
     
 def experiment():
+    param = ExperimentParam()
+    
     # data process
-    X_train, y_train, X_valid, y_valid, X_test, y_test = data_pipeline()
+    X_train, y_train, X_valid, y_valid, X_test, y_test = data_pipeline(param)
     
     # training
     start = datetime.datetime.now()
-    param = TrainParam()
     train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param)
     end = datetime.datetime.now()
     delta = (end - start).seconds
     print(delta, ' seoncds.')
 
 if __name__ == '__main__':
-    experiment()
+    mode = 0
+    
+    if mode == 0:
+        experiment()
+    elif mode == 1:
+        param = ExperimentParam()
+        test_fname = './data/test.p'
+        show_bad_cases(test_fname, param)
+        utils.show_classes(5)
