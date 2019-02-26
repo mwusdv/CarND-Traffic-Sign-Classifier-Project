@@ -110,7 +110,26 @@ def plot_samples(n_row,n_col,X,y):
         plt.axis('off')
     plt.show()
     
-
+# randomly select num_images from X[indices]
+# and show them in n_cols columns
+def show_images(X, y, indices, n_cols, num_images):
+    num_images = min(num_images, len(indices))
+    n_rows = max(1, num_images // n_cols)
+    num_images = min(num_images, n_rows*n_cols)
+    
+    for i in range(num_images):
+        ax = plt.subplot(n_rows, n_cols, i+1)
+        ax.set_aspect('equal')
+        
+        idx = indices[i]
+        
+        plt.imshow(X[idx])
+        plt.text(2,4,str(y[idx]),
+                 color='k',backgroundcolor='w')
+        plt.axis('off')
+        
+    plt.show()
+    
 def classification_accuracy(labels, predictions):
     corrects = np.sum(labels == predictions)
     return corrects / len(labels)

@@ -15,6 +15,18 @@ class TrafficSignNet:
         self._param = param
         self._n_classes = n_classes
         
+        # place holder
+        self._X = tf.placeholder(dtype=tf.float32, shape=[None, param._n_rows, param._n_cols, param._n_channels])
+        self._y = tf.placeholder(dtype=tf.uint8, shape=[None, n_classes])    
+      
+        # logits and predictions
+        self._logits = self.logits(self._X)
+        self._preds = tf.argmax(self._logits, axis=1)
+    
+        # loss
+        ce = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self._logits, labels=self._y)
+        self._loss = tf.reduce_mean(ce)
+        
     def set_training(self, flag):
         self._is_training = flag
         

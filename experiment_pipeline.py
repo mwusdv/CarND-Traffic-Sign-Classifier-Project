@@ -10,6 +10,7 @@ import tensorflow as tf
 import numpy as np
 from sklearn.utils import shuffle
 import datetime
+import os
 
 import utils
 import network
@@ -18,7 +19,7 @@ class TrainParam:
     def __init__(self):
         self._n_epochs = 100
         self._batch_size = 512
-        self._learning_rate = 1e-3
+        self._learning_rate = 5e-4
         self._momentum = 0.9
        
         self._aug_data_period = 20
@@ -44,6 +45,14 @@ class TrainParam:
          
         # fully connected layers
         self._fc_layers = [{'hidden_dim': 512, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True}]
+        
+        # model file name
+        self._model_fname = './models/traffic_sign_net'
+        
+        # image size
+        self._n_rows = 0
+        self._n_cols = 0
+        self._n_channels = 0
         
 def data_pipeline():
     # load data
@@ -96,29 +105,24 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     n_classes = int(np.max(y_train) + 1)
     oh_y_train = utils.one_hot_encode(y_train)
     
-    # place holder
-    _X = tf.placeholder(dtype=tf.float32, shape=[None, n_rows, n_cols, n_channels])
-    _y = tf.placeholder(dtype=tf.uint8, shape=[None, n_classes])    
+    param._n_rows = n_rows
+    param._n_cols = n_cols
+    param._n_channels = n_channels
 
     # network structure and prediction
     net = network.TrafficSignNet(n_classes, param)
-    
     net.set_training(True)
-    _logits = net.logits(_X)
-    _preds = tf.argmax(_logits, axis=1)
-    
-    # loss and optimizer
-    ce = tf.nn.softmax_cross_entropy_with_logits_v2(logits=_logits, labels=_y)
-    _loss = tf.reduce_mean(ce)
-    
+   
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
         # Ensures that we execute the update_ops before performing the train_step
         #train_op = tf.train.AdamOptimizer(learning_rate=param._learning_rate).minimize(_loss)
-        train_op = tf.train.RMSPropOptimizer(learning_rate=param._learning_rate, momentum=param._momentum).minimize(_loss)
+        train_op = tf.train.RMSPropOptimizer(learning_rate=param._learning_rate, momentum=param._momentum).minimize(net._loss)
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
     
+    saver = tf.train.Saver()
+   
     # train
     n_batches = n_data // param._batch_size
     best_valid = 0
@@ -145,7 +149,7 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
             X_batch = X_train[bstart : bend]
             y_batch = oh_y_train[bstart : bend]
             
-            _, loss = sess.run([train_op, _loss], feed_dict={_X:X_batch, _y:y_batch})
+            _, loss = sess.run([train_op, net._loss], feed_dict={net._X:X_batch, net._y:y_batch})
             epoch_loss += loss
         
         epoch_loss /= n_batches
@@ -154,16 +158,17 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
         net.set_training(False)
         
         # validation
-        preds_valid = sess.run(_preds, {_X:X_valid})
+        preds_valid = sess.run(net._preds, {net._X:X_valid})
         valid_accuracy = utils.classification_accuracy(y_valid, preds_valid)
         
         # test
-        preds_test = sess.run(_preds, {_X:X_test})
+        preds_test = sess.run(net._preds, {net._X:X_test})
         test_accuracy = utils.classification_accuracy(y_test, preds_test)
         
         if valid_accuracy > best_valid:
             best_valid = valid_accuracy
             best_valid_test = test_accuracy
+            saver.save(sess, param._model_fname)
         
         if test_accuracy > best_test:
             best_test = test_accuracy
@@ -176,7 +181,28 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     print('best valid: ', best_valid, ' best valid test: ', best_valid_test)
     print('best test: ', best_test, ' best_test_valid: ', best_test_valid)
 
-            
+
+# show bad cases in the test data
+def show_bad_cases(test_fname, param):
+    # load test data
+    X_test, y_test = utils.load_data(test_fname)
+    X_test = np.array([utils.pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
+    
+    # load model
+    n_classes = int(np.max(y_test) + 1)
+    net = network.TrafficSignNet(n_classes, param)
+    sess = tf.Session()
+    sess.run(tf.global_variables_initializer())
+    
+    saver = tf.train.Saver()
+    saver.restore(sess, param._model_fname)
+    net.set_training(False)
+    
+    # test
+    preds_test = sess.run(net._preds, {net._X:X_test})
+    err_indices = np.where(preds_test != y_test)
+    
+    utils.show_images(X_test, y_test, err_indices, n_cols=10, num_images=200)
     
 def experiment():
     # data process
