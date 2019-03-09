@@ -29,7 +29,7 @@ def pre_process(img):
 
 
 # rotation, scale, translation, shear
-def transorm_image(img, angle_degree, scale, tx, ty, src, dst):
+def transorm_image(img, angle_degree, scale, tx, ty, src=None, dst=None):
     n_rows, n_cols = img.shape[:2]
     
     # rotation and scale
@@ -41,8 +41,9 @@ def transorm_image(img, angle_degree, scale, tx, ty, src, dst):
     o = cv2.warpAffine(o, trans_m, (n_cols, n_rows))
     
     # shear
-    shear_m = cv2.getAffineTransform(src, dst)
-    o = cv2.warpAffine(o, shear_m, (n_cols, n_rows))
+    if src is not None:
+        shear_m = cv2.getAffineTransform(src, dst)
+        o = cv2.warpAffine(o, shear_m, (n_cols, n_rows))
     
     return o
 
@@ -59,7 +60,28 @@ def get_class_size(y):
         class_size[c] = len(np.where(y == c)[0])
         
     return class_size
+
+def distort_test_images(X, param):
+    X_distort = []
+    n_images, n_rows, n_cols, n_channels = X.shape
+    for n in range(n_images):
+        # affine transformation
+        angle_degree = np.random.uniform(-10, 10)
+        scale = np.random.uniform(0.9, 1.1)
+        tx, ty = np.random.uniform(-5, 5, 2)
+        src = np.array([[5, 5], [5, n_cols-5], [n_rows-5, 5]], dtype=np.float32)
+        dst = np.copy(src)
+        for p in range(len(dst)):
+            delta = np.random.randint(-1, 1, 2)
+            dst[p] += delta
         
+        I = transorm_image(X[n], angle_degree, scale, tx, ty , src, dst)
+        X_distort.append(I)
+    
+    X_distort = np.array(X_distort)
+    
+    return X_distort
+    
 # data augmentation by affine transformation
 def augment_data_affine(X, y, param):
     class_size = get_class_size(y)
@@ -88,8 +110,8 @@ def augment_data_affine(X, y, param):
                 tx, ty = np.random.uniform(-5, 5, 2)
                 src = np.array([[5, 5], [5, 15], [15, 5]], dtype=np.float32)
                 dst = np.copy(src)
-                for p in range(3):
-                    delta = np.random.randint(-2, 2, 2)
+                for p in range(len(dst)):
+                    delta = np.random.randint(-1, 1, 2)
                     dst[p] += delta
                 
                 I = transorm_image(X[seed_indices[n]], angle_degree, scale, tx, ty , src, dst)
@@ -100,10 +122,10 @@ def augment_data_affine(X, y, param):
     X_aug = np.array(X_aug)
     y_aug = np.array(y_aug)
     
-    X = np.concatenate([X, X_aug], axis=0)
-    y = np.concatenate([y, y_aug], axis=0)
+    #X = np.concatenate([X, X_aug], axis=0)
+    #y = np.concatenate([y, y_aug], axis=0)
     
-    return X, y
+    return X_aug, y_aug
 
 # data augmentation by gamma correction
 def augment_data_gamma(X, y, param):
@@ -142,7 +164,9 @@ def augment_data_gamma(X, y, param):
 # augment data
 def augment_data(X, y, param):
     # affine transform
-    X, y = augment_data_affine(X, y, param)
+    X_aug, y_aug = augment_data_affine(X, y, param)
+    X = np.concatenate([X, X_aug], axis=0)
+    y = np.concatenate([y, y_aug], axis=0)
     
     # gamma correction
     #X, y = augment_data_gamma(X, y, param)
