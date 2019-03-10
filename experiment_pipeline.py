@@ -56,13 +56,6 @@ class ExperimentParam:
                             {'kernel': [[3, 64], [5, 2, 64], [2, 5, 64]], 'pooling': True, 'keep_prob': 1.0, 
                               'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True,
                               'l2_reg': 0.01}]
-         
-        # scan layers
-        self._scan_layers = [{'kernel': [[4, 1, 64], [1, 4, 64]],
-                              'pooling': True, 
-                              'keep_prob': 1.0, 
-                              'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'VALID', 
-                              'batch_norm': True, 'l2_reg': 0.01}]
         
         # fully connected layers
         self._fc_layers = [{'hidden_dim': 512, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True,
