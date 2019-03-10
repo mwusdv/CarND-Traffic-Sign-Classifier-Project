@@ -36,13 +36,14 @@ class TrafficSignNet:
         self._is_training = flag
         
     def logits(self):
+        # preprocess layers
         preprop_output = self.pre_process_layers(self._X)
-        conv_output, conv_2_fc = self.conv_layers(preprop_output)
-        #scan_2_fc = self.scan_layers(conv_output)
         
-        #x = tf.concat([conv_2_fc, scan_2_fc], axis=1)
-        x = conv_2_fc
+        # convolution layers
+        conv_output, conv_2_fc = self.conv_layers(preprop_output)
+     
         # fully connected layers
+        x = conv_2_fc
         for layer in self._param._fc_layers:
             # batch norm
             if layer['batch_norm']:
@@ -153,52 +154,3 @@ class TrafficSignNet:
         
         return conv_output, conv_2_fc
         
-        
-    def scan_layers(self, layer_input):
-        scan_2_fc = []
-        prev_x = layer_input
-        
-        # scan layers
-        for layer in self._param._scan_layers:
-            # batch norm
-            if layer['batch_norm']:
-                bn = batch_norm
-                bn_params = {'center':True, 'scale':True, 'is_training':self._is_training}
-            else:
-                bn = None
-                bn_params = None
-             
-            # convlution with  each kernel size
-            for kn in layer['kernel']:
-                # get output from the previous layer
-                x = prev_x
-                
-                # conv kernel
-                kernel_size = kn[0:2]
-                num_outputs = kn[2]
-                
-                # convlutions
-                x = conv2d(x, num_outputs=num_outputs, kernel_size=kernel_size, stride=1, 
-                           weights_regularizer=l2_regularizer(layer['l2_reg']),
-                           activation_fn=layer['activation_fn'], padding=layer['padding'],
-                           normalizer_fn=bn, 
-                           normalizer_params=bn_params)
-                
-                # pooling
-                if layer['pooling']:
-                    x = max_pool2d(x, kernel_size=2, stride=2, padding=layer['padding'])
-                    
-                # dropout
-                if layer['keep_prob'] > 0 and layer['keep_prob'] < 1.0:
-                    x = dropout(x, keep_prob=layer['keep_prob'], is_training=self._is_training)
-                    
-                # go to fully connected layers
-                if layer['go_to_fc']:
-                    scan_2_fc.append(flatten(x))
-                
-            # go to next layer
-            prev_x = x
-
-        scan_2_fc = tf.concat(scan_2_fc, 1)
-        
-        return scan_2_fc
