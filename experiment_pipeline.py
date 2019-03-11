@@ -16,12 +16,12 @@ import network
 
 class ExperimentParam:
     def __init__(self):
-        self._n_epochs = 60
+        self._n_epochs = 50
         self._batch_size = 512
         self._learning_rate = 1e-3
         self._momentum = 0.9
        
-        self._aug_data_period = 15
+        self._aug_data_period = 5
         
         # data augmentation
         self._affine_aug_ratio = 2.5
@@ -57,6 +57,11 @@ class ExperimentParam:
         # fully connected layers
         self._fc_layers = [{'hidden_dim': 512, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True,
                             'l2_reg': 0.01}]
+                           
+                           
+        
+        #{'hidden_dim': 512, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True,
+        #                    'l2_reg': 0.01}]
         
         # model file name
         self._model_fname = './models/traffic_sign_net'
@@ -149,7 +154,7 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
             print('re-augment data')
             X_train, y_train, oh_y_train = gen_new_train(param)
         
-        X_train, oh_y_train = shuffle(X_train, oh_y_train)
+        indices = shuffle(np.array(range(n_data)))
            
         # turn on training flag
         net.set_training(True)
@@ -160,8 +165,9 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
             bstart = batch * param._batch_size
             bend = (batch+1) * param._batch_size
             
-            X_batch = X_train[bstart : bend]
-            y_batch = oh_y_train[bstart : bend]
+            batch_indices = indices[bstart:bend]
+            X_batch = X_train[batch_indices]
+            y_batch = oh_y_train[batch_indices]
             
             _, loss = sess.run([train_op, net._loss], feed_dict={net._X:X_batch, net._y:y_batch})
             epoch_loss += loss
