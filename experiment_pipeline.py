@@ -30,9 +30,6 @@ class ExperimentParam:
         
         self._valid_period = 1
         
-        # regularization
-        self._l2 = 0.01
-        
         self._n_test_distortions = 3
         
         # pre-processing layers
