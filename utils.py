@@ -192,7 +192,7 @@ def show_classes(n_each):
     n_classes = np.max(y)+1
     count = 0
     
-    img_size = 1
+    img_size = 3
     hsize = img_size * n_each
     vsize = img_size * n_classes
     fig = plt.figure(figsize=(hsize,vsize))
