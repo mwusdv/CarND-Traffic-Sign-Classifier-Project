@@ -87,7 +87,7 @@ class TrafficSignNet:
             num_outputs = kn[1]
             
             x = conv2d(x, num_outputs=num_outputs, kernel_size=kernel_size, stride=1, 
-                       weights_regularizer=l2_regularizer(layer['lr_reg']),
+                       weights_regularizer=l2_regularizer(layer['l2_reg']),
                        activation_fn=layer['activation_fn'], padding=layer['padding'],
                        normalizer_fn=bn, 
                        normalizer_params=bn_params)
