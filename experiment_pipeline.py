@@ -95,12 +95,7 @@ def data_pipeline(param):
     # data augmentation
     X_train, y_train = utils.augment_data(X_train, y_train, param)  
     print("Number of augmented training examples =", len(X_train))
-    
-    tmp = param._affine_aug_ratio
-    param._affine_aug_ratio = 1.1
-    X_valid, y_valid = utils.augment_data(X_valid, y_valid, param)
-    param._affine_aug_ratio = tmp
-    print("Number of augmented validation examples =", len(X_valid))
+    print("Number of validation examples =", len(X_valid))
     
     # pre-process
     X_train = np.array([utils.pre_process(X_train[i]) for i in range(len(X_train))], dtype=np.float32)
