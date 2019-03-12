@@ -10,13 +10,16 @@ import tensorflow as tf
 import numpy as np
 from sklearn.utils import shuffle
 import datetime
-
+import glob
+import os
+import matplotlib.image as mpimg
+import scipy.misc
 import utils
 import network
 
 class ExperimentParam:
     def __init__(self, n_rows, n_cols, n_channels, n_classes):
-        self._n_epochs = 5
+        self._n_epochs = 50
         self._batch_size = 512
         self._learning_rate = 1e-3
         self._momentum = 0.9
@@ -56,7 +59,7 @@ class ExperimentParam:
         
         # fully connected layers
         self._fc_layers = [{'hidden_dim': 512, 'keep_prob': 0.5, 'activation_fn': tf.nn.relu, 'batch_norm': True,
-                            'l2_reg': 0.01}]
+                            'l2_reg': 0.1}]
                            
                            
         
@@ -90,9 +93,14 @@ def data_pipeline(param):
     print("Number of classes =", n_classes)
 
     # data augmentation
-    X_train, y_train = utils.augment_data(X_train, y_train, param)
-    n_train = len(X_train)    
-    print("Number of augmented training examples =", n_train)
+    X_train, y_train = utils.augment_data(X_train, y_train, param)  
+    print("Number of augmented training examples =", len(X_train))
+    
+    tmp = param._affine_aug_ratio
+    param._affine_aug_ratio = 1.1
+    X_valid, y_valid = utils.augment_data(X_valid, y_valid, param)
+    param._affine_aug_ratio = tmp
+    print("Number of augmented validation examples =", len(X_valid))
     
     # pre-process
     X_train = np.array([utils.pre_process(X_train[i]) for i in range(len(X_train))], dtype=np.float32)
@@ -204,8 +212,8 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     print('best test: ', best_test, ' best_test_valid: ', best_test_valid)
 
 
-# load and test model
-def test_model(model_fname, param):
+# load model
+def load_model(model_fname, param):
     # define model
     tf.reset_default_graph()
     net = network.TrafficSignNet(param)
@@ -214,18 +222,17 @@ def test_model(model_fname, param):
     sess = tf.Session()
     saver = tf.train.Saver()
     saver.restore(sess, model_fname)
-    net.set_training(False)
     
-    # load data
-    X_test, y_test = utils.load_data('./data/test.p')
-    X_test = np.array([utils.pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
+    return net, sess
 
-    
-    preds_test = sess.run(net._preds, {net._X:X_test})
-    test_accuracy = utils.classification_accuracy(y_test, preds_test)
+# load and test model
+def test_model(model_fname, param, X, y):
+    net, sess = load_model(model_fname, param)
+    preds = sess.run(net._preds, {net._X:X})
+    accuracy = utils.classification_accuracy(y, preds)
     
     sess.close()
-    print('test accuracy: ', test_accuracy)
+    return accuracy, preds
     
     
 def classify(sess, X_test, net, param):
@@ -304,21 +311,70 @@ def experiment():
     
     # training
     start = datetime.datetime.now()
-    #train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param)
+    train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param)
     end = datetime.datetime.now()
     delta = (end - start).seconds
     print(delta, ' seoncds.')
     
     # test
     model_fname = param._model_fname
-    test_model(model_fname, param)
+    test_accuracy, _= test_model(model_fname, param, X_test, y_test)
+    print('Test accuracy: ', test_accuracy)
+    
 
+# load images from web
+def load_web_images(folder, param):
+    X = []
+    y = []
+    img_fname_list = glob.glob(os.path.join(folder, '*.jpg'))
+    for fname in img_fname_list:
+        img = mpimg.imread(fname)
+        img = scipy.misc.imresize(img, [32, 32])
+        
+        X.append(np.uint8(img))
+        label = int(fname.split('/')[-1].split('.')[0].split('-')[-1])
+        y.append(label)
+        
+    X = np.array(X)
+    y = np.array(y)
+    
+    return X, y
+
+# experiments on the images downloaded from web
+def exp_web_images():
+    # parameters
+    param = ExperimentParam(n_rows=32, n_cols=32, n_channels=3, n_classes=43)
+    
+    # load data
+    folder = './from-web'
+    X, y = load_web_images(folder, param)
+    X = np.array([utils.pre_process(X[i]) for i in range(len(X))], dtype=np.float32)
+ 
+    # load model
+    model_fname = param._model_fname
+    net, sess = load_model(model_fname, param)
+   
+    preds, softmax = sess.run([net._preds, net._softmax], {net._X:X})
+    accuracy = utils.classification_accuracy(y, preds)
+    print('Accuracy on web images: ', accuracy)
+    print(y)
+    print(preds)
+    
+    
+    # top softmax
+    topk = sess.run(tf.nn.top_k(tf.constant(softmax), k=3))
+    print(topk)
+    
+    
+    
 if __name__ == '__main__':
     mode = 0
     
     if mode == 0:
         experiment()
     elif mode == 1:
+        exp_web_images()
+    elif mode == 2:
         param = ExperimentParam()
         test_fname = './data/test.p'
         show_bad_cases(test_fname, param)
