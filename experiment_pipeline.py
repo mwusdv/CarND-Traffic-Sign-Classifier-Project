@@ -15,8 +15,8 @@ import utils
 import network
 
 class ExperimentParam:
-    def __init__(self):
-        self._n_epochs = 50
+    def __init__(self, n_rows, n_cols, n_channels, n_classes):
+        self._n_epochs = 5
         self._batch_size = 512
         self._learning_rate = 1e-3
         self._momentum = 0.9
@@ -67,10 +67,10 @@ class ExperimentParam:
         self._model_fname = './models/traffic_sign_net'
         
         # image size
-        self._n_rows = 0
-        self._n_cols = 0
-        self._n_channels = 0
-        self._n_classes = 0
+        self._n_rows = n_rows
+        self._n_cols = n_cols
+        self._n_channels = n_channels
+        self._n_classes = n_classes
         
 def data_pipeline(param):
     # load data
@@ -87,7 +87,6 @@ def data_pipeline(param):
     print("Image data shape =", image_shape)
     
     n_classes = np.max(y_train)+1
-    param._n_classes = n_classes
     print("Number of classes =", n_classes)
 
     # data augmentation
@@ -121,15 +120,10 @@ def gen_new_train(param):
 def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     # data
     n_data, n_rows, n_cols, n_channels = X_train.shape
-    n_classes = int(np.max(y_train) + 1)
     oh_y_train = utils.one_hot_encode(y_train)
-    
-    param._n_rows = n_rows
-    param._n_cols = n_cols
-    param._n_channels = n_channels
 
     # network structure and prediction
-    net = network.TrafficSignNet(n_classes, param)
+    net = network.TrafficSignNet(param)
     net.set_training(True)
    
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -210,6 +204,30 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     print('best test: ', best_test, ' best_test_valid: ', best_test_valid)
 
 
+# load and test model
+def test_model(model_fname, param):
+    # define model
+    tf.reset_default_graph()
+    net = network.TrafficSignNet(param)
+    
+    # load model data
+    sess = tf.Session()
+    saver = tf.train.Saver()
+    saver.restore(sess, model_fname)
+    net.set_training(False)
+    
+    # load data
+    X_test, y_test = utils.load_data('./data/test.p')
+    X_test = np.array([utils.pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
+
+    
+    preds_test = sess.run(net._preds, {net._X:X_test})
+    test_accuracy = utils.classification_accuracy(y_test, preds_test)
+    
+    sess.close()
+    print('test accuracy: ', test_accuracy)
+    
+    
 def classify(sess, X_test, net, param):
     entropies = []
     entropy = sess.run(net._entropy, feed_dict={net._X:X_test})
@@ -279,17 +297,21 @@ def show_bad_cases(test_fname, param):
     utils.show_images(X_test, y_test, err_indices, n_cols=5, num_images=200, preds=preds_test)
     
 def experiment():
-    param = ExperimentParam()
+    param = ExperimentParam(n_rows=32, n_cols=32, n_channels=3, n_classes=43)
     
     # data process
     X_train, y_train, X_valid, y_valid, X_test, y_test = data_pipeline(param)
     
     # training
     start = datetime.datetime.now()
-    train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param)
+    #train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param)
     end = datetime.datetime.now()
     delta = (end - start).seconds
     print(delta, ' seoncds.')
+    
+    # test
+    model_fname = param._model_fname
+    test_model(model_fname, param)
 
 if __name__ == '__main__':
     mode = 0

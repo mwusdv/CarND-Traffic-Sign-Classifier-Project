@@ -10,14 +10,13 @@ import tensorflow as tf
 from tensorflow.contrib.layers import flatten, conv2d, l2_regularizer, max_pool2d, fully_connected, dropout, batch_norm
 
 class TrafficSignNet:
-    def __init__(self, n_classes, param):
+    def __init__(self, param):
         self._is_training = True
         self._param = param
-        self._n_classes = n_classes
         
         # place holder
         self._X = tf.placeholder(dtype=tf.float32, shape=[None, param._n_rows, param._n_cols, param._n_channels])
-        self._y = tf.placeholder(dtype=tf.uint8, shape=[None, n_classes])    
+        self._y = tf.placeholder(dtype=tf.uint8, shape=[None, param._n_classes])    
       
         # logits and predictions
         self._logits = self.logits()
@@ -63,7 +62,7 @@ class TrafficSignNet:
             x = dropout(x, keep_prob=layer['keep_prob'], is_training=self._is_training)
         
         # output layer
-        x = fully_connected(x, num_outputs=self._n_classes, 
+        x = fully_connected(x, num_outputs=self._param._n_classes, 
                             weights_regularizer=l2_regularizer(layer['l2_reg']),
                             activation_fn=None)
         
