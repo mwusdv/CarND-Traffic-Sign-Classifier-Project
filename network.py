@@ -11,13 +11,13 @@ from tensorflow.contrib.layers import flatten, conv2d, l2_regularizer, max_pool2
 
 class TrafficSignNet:
     def __init__(self, param):
-        self._is_training = True
         self._param = param
         
         # place holder
         self._X = tf.placeholder(dtype=tf.float32, shape=[None, param._n_rows, param._n_cols, param._n_channels])
         self._y = tf.placeholder(dtype=tf.uint8, shape=[None, param._n_classes])    
-      
+        self._is_training = tf.placeholder(dtype=tf.bool)
+        
         # logits and predictions
         self._logits = self.logits()
         self._preds = tf.argmax(self._logits, axis=1)
@@ -31,8 +31,6 @@ class TrafficSignNet:
         ce = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self._logits, labels=self._y)
         self._loss = tf.reduce_mean(ce)
         
-    def set_training(self, flag):
-        self._is_training = flag
         
     def logits(self):
         # preprocess layers
@@ -91,6 +89,10 @@ class TrafficSignNet:
                        normalizer_fn=bn, 
                        normalizer_params=bn_params)
 
+            # dropout
+            if layer['keep_prob'] > 0 and layer['keep_prob'] < 1.0:
+                x = dropout(x, keep_prob=layer['keep_prob'], is_training=self._is_training)
+                
         return x
     
     def conv_layers(self, layer_input):

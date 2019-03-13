@@ -37,11 +37,11 @@ class ExperimentParam:
         
         # pre-processing layers
         self._pre_prop_layers = [{'kernel': [3, 8], 'pooling': True, 'keep_prob': 1.0, 
-                                 'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 
+                                 'go_to_fc': False, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 
                                  'batch_norm': True, 'l2_reg': 0.01},
                                 
-                                 {'kernel': [1, 8], 'pooling': True, 'keep_prob': 1.0, 
-                                ' go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 
+                                 {'kernel': [1, 8], 'pooling': True, 'keep_prob': 0.9, 
+                                ' go_to_fc': False, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 
                                 'batch_norm': True, 'l2_reg': 0.01}]
 
         # conv layers: 
@@ -126,9 +126,7 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
     oh_y_train = utils.one_hot_encode(y_train)
 
     # network structure and prediction
-    net = network.TrafficSignNet(param)
-    net.set_training(True)
-   
+    net = network.TrafficSignNet(param)   
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
         # Ensures that we execute the update_ops before performing the train_step
@@ -152,9 +150,6 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
             X_train, y_train, oh_y_train = gen_new_train(param)
         
         indices = shuffle(np.array(range(n_data)))
-           
-        # turn on training flag
-        net.set_training(True)
         
         # training
         epoch_loss = 0
@@ -166,22 +161,21 @@ def train_pipeline(X_train, y_train, X_valid, y_valid, X_test, y_test, param):
             X_batch = X_train[batch_indices]
             y_batch = oh_y_train[batch_indices]
             
-            _, loss = sess.run([train_op, net._loss], feed_dict={net._X:X_batch, net._y:y_batch})
+            _, loss = sess.run([train_op, net._loss], 
+                               feed_dict={net._X:X_batch, net._y:y_batch, net._is_training:True})
             epoch_loss += loss
         
         epoch_loss /= n_batches
         
         # turn off traning flag to calculate predictions
-        if epoch % param._valid_period == 0 or epoch == param._n_epochs-1:
-            net.set_training(False)
-            
+        if epoch % param._valid_period == 0 or epoch == param._n_epochs-1: 
             # validation
-            preds_valid = sess.run(net._preds, {net._X:X_valid})
+            preds_valid = sess.run(net._preds, {net._X:X_valid, net._is_training:False})
             valid_accuracy = utils.classification_accuracy(y_valid, preds_valid)
             
             # test
             
-            preds_test = sess.run(net._preds, {net._X:X_test})
+            preds_test = sess.run(net._preds, {net._X:X_test, net._is_training:False})
             test_accuracy = utils.classification_accuracy(y_test, preds_test)
             
             #preds_test1 = classify(sess, X_test, net, param)
@@ -223,46 +217,11 @@ def load_model(model_fname, param):
 # load and test model
 def test_model(model_fname, param, X, y):
     net, sess = load_model(model_fname, param)
-    preds = sess.run(net._preds, {net._X:X})
+    preds = sess.run(net._preds, {net._X:X, net._is_training:False})
     accuracy = utils.classification_accuracy(y, preds)
     
     sess.close()
     return accuracy, preds
-    
-    
-def classify(sess, X_test, net, param):
-    entropies = []
-    entropy = sess.run(net._entropy, feed_dict={net._X:X_test})
-    entropies.append(entropy)
-    
-    preds = []
-    preds_test = sess.run(net._preds, {net._X:X_test})
-    preds.append(preds_test)
-    
-    for n in range(param._n_test_distortions):
-        X_distort = utils.distort_test_images(X_test, param)
-        #entropy = sess.run(net._entropy, feed_dict={net._X:X_distort})
-        #entropies.append(entropy)
-    
-        preds_test = sess.run(net._preds, {net._X:X_distort})
-        preds.append(preds_test)
-    
-    #entropies = np.stack(entropies, axis=1)
-    #indices = np.argmin(entropies, axis=1)
-    
-    preds = np.stack(preds, axis=1)
-    preds_test = []
-    for n in range(preds.shape[0]):
-        counter = np.zeros(shape=[param._n_classes], dtype=np.int32)
-        for p in preds[n]:
-            counter[p] += 1
-        c = np.argmax(counter)
-        preds_test.append(c)
-    preds_test = np.array(preds_test)
-    
-    return preds_test
-    
-    
     
     
 # show bad cases in the test data
@@ -285,10 +244,9 @@ def show_bad_cases(test_fname, param):
     
     saver = tf.train.Saver()
     saver.restore(sess, param._model_fname)
-    net.set_training(False)
     
     # test
-    preds_test = sess.run(net._preds, {net._X:X_test_normed})
+    preds_test = sess.run(net._preds, {net._X:X_test_normed, net._is_training:False})
     test_accuracy = utils.classification_accuracy(y_test, preds_test)
     print('test accuracy: ', test_accuracy)
     sess.close()
@@ -349,7 +307,7 @@ def exp_web_images():
     model_fname = param._model_fname
     net, sess = load_model(model_fname, param)
    
-    preds, softmax = sess.run([net._preds, net._softmax], {net._X:X})
+    preds, softmax = sess.run([net._preds, net._softmax], {net._X:X, net._is_training:False})
     accuracy = utils.classification_accuracy(y, preds)
     print('Accuracy on web images: ', accuracy)
     print(y)
@@ -360,6 +318,22 @@ def exp_web_images():
     topk = sess.run(tf.nn.top_k(tf.constant(softmax), k=3))
     print(topk)
     
+ # experiments on the test data
+def exp_test_data():
+    # parameters
+    param = ExperimentParam(n_rows=32, n_cols=32, n_channels=3, n_classes=43)
+    
+    # load data
+    X_test, y_test = utils.load_data('./data/test.p')
+    X_test = np.array([utils.pre_process(X_test[i]) for i in range(len(X_test))], dtype=np.float32)
+ 
+    # load model
+    model_fname = param._model_fname
+    net, sess = load_model(model_fname, param)
+
+    preds = sess.run(net._preds, {net._X:X_test, net._is_training:False})
+    accuracy = utils.classification_accuracy(y_test, preds)
+    print('Test accuracy: ', accuracy)
     
     
 if __name__ == '__main__':
@@ -370,6 +344,8 @@ if __name__ == '__main__':
     elif mode == 1:
         exp_web_images()
     elif mode == 2:
+        exp_test_data()
+    elif mode == 3:
         param = ExperimentParam()
         test_fname = './data/test.p'
         show_bad_cases(test_fname, param)
