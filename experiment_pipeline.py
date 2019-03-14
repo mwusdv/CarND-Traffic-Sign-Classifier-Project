@@ -12,10 +12,9 @@ from sklearn.utils import shuffle
 import datetime
 import glob
 import os
-import matplotlib.image as mpimg
-import scipy.misc
 import utils
 import network
+import PIL
 
 class ExperimentParam:
     def __init__(self, n_rows, n_cols, n_channels, n_classes):
@@ -281,10 +280,10 @@ def load_web_images(folder, param):
     y = []
     img_fname_list = glob.glob(os.path.join(folder, '*.jpg'))
     for fname in img_fname_list:
-        img = mpimg.imread(fname)
-        img = scipy.misc.imresize(img, [32, 32])
-        
-        X.append(np.uint8(img))
+        img = PIL.Image.open(fname)
+        img = img.resize([32, 32], PIL.Image.BILINEAR)
+        X.append(np.array(img, dtype=np.uint8))
+
         label = int(fname.split('/')[-1].split('.')[0].split('-')[-1])
         y.append(label)
         
@@ -310,8 +309,8 @@ def exp_web_images():
     preds, softmax = sess.run([net._preds, net._softmax], {net._X:X, net._is_training:False})
     accuracy = utils.classification_accuracy(y, preds)
     print('Accuracy on web images: ', accuracy)
-    print(y)
-    print(preds)
+    print('labels: ', y)
+    print('predictions: ', preds)
     
     
     # top softmax
@@ -337,7 +336,7 @@ def exp_test_data():
     
     
 if __name__ == '__main__':
-    mode = 2
+    mode = 1
     
     if mode == 0:
         experiment()
