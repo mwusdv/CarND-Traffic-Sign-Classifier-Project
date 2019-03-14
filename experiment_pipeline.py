@@ -40,12 +40,12 @@ class ExperimentParam:
                                  'go_to_fc': False, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 
                                  'batch_norm': True, 'l2_reg': 0.01},
                                 
-                                 {'kernel': [1, 8], 'pooling': True, 'keep_prob': 0.9, 
+                                 {'kernel': [1, 8], 'pooling': True, 'keep_prob': 0.8, 
                                 ' go_to_fc': False, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 
                                 'batch_norm': True, 'l2_reg': 0.01}]
 
         # conv layers: 
-        self._conv_layers = [{'kernel': [[3, 16], [5, 16], [7, 3, 16], [3, 7, 16]], 'pooling': True, 'keep_prob': 1.0, 
+        self._conv_layers = [{'kernel': [[3, 16], [5, 16], [7, 3, 16], [3, 7, 16]], 'pooling': True, 'keep_prob': 0.8, 
                               'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True,
                               'l2_reg': 0.01},
         
@@ -337,7 +337,7 @@ def exp_test_data():
     
     
 if __name__ == '__main__':
-    mode = 0
+    mode = 2
     
     if mode == 0:
         experiment()
