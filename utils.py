@@ -260,6 +260,15 @@ def load_data(data_fname):
     X, y = data['features'], data['labels']
     return X, y
 
+def train_bar_chart():
+    X, y = load_data('./data/train.p')
+    c = get_class_size(y)
+    n_classes = len(c)
+    plt.bar(range(n_classes), c, align='center', alpha=0.5, color='b')
+    plt.ylabel('class size')
+    plt.title('Number of training examples in each class')
+    plt.show()
+    
 if __name__ == '__main__':
     X, y = load_data('./data/train.p')
     X_normed = np.array([pre_process(X[i]) for i in range(len(X))], dtype=np.float32)
