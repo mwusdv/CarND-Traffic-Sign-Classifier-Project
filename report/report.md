@@ -12,9 +12,10 @@ The goals / steps of this project are the following:
 * Summarize the results with a written report
 
 ## Rubric Points
+
 **Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/481/view) individually and describe how I addressed each point in my implementation.**
 
-### Writeup / README**
+### Writeup / README
 **1. Provide a Writeup / README that includes all the rubric points and how you addressed each one. You can submit your writeup as markdown or pdf. You can use this template as a guide for writing the report. The submission includes the project code.**
 
 You're reading it! and here is a link to my [project code](https://github.com/mwusdv/CarND-Traffic-Sign-Classifier-Project)
@@ -33,33 +34,69 @@ I used the numpy library to calculate summary statistics of the traffic signs da
 **2. Include an exploratory visualization of the dataset.**
 
 Here is an exploratory visualization of the data set. It is a bar chart showing how the data ...
+![class bar chart](class_bar_chart.jpg)
 
 
-alt text
-Design and Test a Model Architecture
-1. Describe how you preprocessed the image data. What techniques were chosen and why did you choose these techniques? Consider including images showing the output of each preprocessing technique. Pre-processing refers to techniques such as converting to grayscale, normalization, etc. (OPTIONAL: As described in the "Stand Out Suggestions" part of the rubric, if you generated additional data for training, describe why you decided to generate additional data, how you generated the data, and provide example images of the additional data. Then describe the characteristics of the augmented training set like number of images in the set, number of images for each class, etc.)
+### Design and Test a Model Architecture
+**1. Describe how you preprocessed the image data. What techniques were chosen and why did you choose these techniques? Consider including images showing the output of each preprocessing technique. Pre-processing refers to techniques such as converting to grayscale, normalization, etc. (OPTIONAL: As described in the "Stand Out Suggestions" part of the rubric, if you generated additional data for training, describe why you decided to generate additional data, how you generated the data, and provide example images of the additional data. Then describe the characteristics of the augmented training set like number of images in the set, number of images for each class, etc.)**
 
-As a first step, I decided to convert the images to grayscale because ...
+* **Histogram equalization.** The first step of pre-processing is histogram equalization. This is to reduce the impact on the different intensity distributions in each image.  Here is an example of a traffic sign image before and after histogram equalization. We can see that the two original images have quite different intensity distributions. And this difference is intuitively reduced after histogram equalization.
 
-Here is an example of a traffic sign image before and after grayscaling.
+    ![histeq](pre-process.jpg)
 
-alt text
+* **Normalization.** As the second step of pre-processing: each image is normlaized by subtracting the mean and dividing by the standard deviation of that image. This can make the each image have the mean value of 0.0 and standard deviation of 1.0. By making the distribution of the images similar to each other, the training and generalization could be easier.
 
-As a last step, I normalized the image data because ...
+* **Generating more training examples.** Next I decided to generate additional data because as can be seen from the above bar chart, the number of training examples are highly imbalanced. And also the size, position, and angles vary a lot within the same classs. Therefore, 
+    
+    * To make the number of training examples equal to each other in different classes.
 
-I decided to generate additional data because ...
+    * I used `cv2.warpAffine` to generate augmented images. Namely, each image is transformed by rotating, translation, scaling and shearing. The rotation angle, translation amount, scaling amount and shearing parameters are randomly selected within pre-defined ranges. Here is an example of an original image and an augmented image. The first and the 3rd rows are the images from the original training data. While the 2nd and the 4th rows are the augmented images. It can be seen that the augmented images have rotaions, translations, scaling and shearing.
 
-To add more data to the the data set, I used the following techniques because ...
-
-Here is an example of an original image and an augmented image:
-
-alt text
-
-The difference between the original data set and the augmented data set is the following ...
+        ![aug_img](aug.jpg)
+    
+   
 2. Describe what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.) Consider including a diagram and/or table describing the final model.
 
-My final model consisted of the following layers:
-Layer 	Description
+    My final model architecture can be best described by the parameters in my code. This format gives me much flexibility to implement the network. I was able to experiment different network architectures by just chaning the parmaeters withoug changing the code at all.
+
+    ```
+    # pre-processing layers
+    pre_prop_layers = [{'kernel': [3, 8], 'pooling': True, 
+    'keep_prob': 1.0, 'go_to_fc': False, 
+    'activation_fn': tf.nn.relu, 'padding': 'SAME', 
+    'batch_norm': True, 'l2_reg': 0.01},
+                            
+    {'kernel': [1, 8], 'pooling': True, 
+    'keep_prob': 0.8, ' go_to_fc': False, 
+    'activation_fn': tf.nn.relu, 'padding': 'SAME', 
+    'batch_norm': True, 'l2_reg': 0.01}]
+
+
+
+    # conv layers: 
+    conv_layers = [{'kernel': [[3, 16], [5, 16], [7, 3, 16], [3, 7, 16]], 'pooling': True, 'keep_prob': 0.8, 
+    'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True, 'l2_reg': 0.01},
+        
+    {'kernel': [[3, 32], [5, 32], [7, 3, 32], [3, 7, 32]], 
+    'pooling': True, 'keep_prob': 1.0, 
+    'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True, 'l2_reg': 0.01},
+
+    {'kernel': [[3, 64], [5, 2, 64], [2, 5, 64]], 
+    'pooling': True, 'keep_prob': 1.0,       
+    'go_to_fc': True, 'activation_fn': tf.nn.relu, 'padding': 'SAME', 'batch_norm': True, 'l2_reg': 0.01}]
+
+
+
+    # fully connected layers
+    self._fc_layers = [{'hidden_dim': 512, 'keep_prob': 0.5, 
+    'activation_fn': tf.nn.relu, 'batch_norm': True, 'l2_reg': 0.1}]
+    ```
+    In the above code block, the meaning of most of the parameters are quite straight forward. The meaning of the _kernel_ parameters will be described in the following.
+
+    There are three blocks of layers in my model. 
+    * The first block consists of **pre-processing** layers. I didn't do grayscaling in the previous pre-processing step. Rather I choosed to do the _pixel combinations_ here and let the algorithm to choose the optimal weights.  In this block, the _kernel_ parameters consists of two integer values. The first one is the size of the convolutional kernel, while the second one is the number of kernels.
+
+    * The second block is made up of 3 convolutional layers
 Input 	32x32x3 RGB image
 Convolution 3x3 	1x1 stride, same padding, outputs 32x32x64
 RELU 	

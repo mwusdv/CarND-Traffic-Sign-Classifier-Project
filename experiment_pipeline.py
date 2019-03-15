@@ -216,7 +216,21 @@ def load_model(model_fname, param):
 # load and test model
 def test_model(model_fname, param, X, y):
     net, sess = load_model(model_fname, param)
-    preds = sess.run(net._preds, {net._X:X, net._is_training:False})
+    n_images = X.shape[0]
+    batch_size = param._batch_size
+    n_batches = n_images // batch_size
+    if n_batches * batch_size < n_images:
+        n_batches += 1
+    
+    preds = []
+    for batch in range(n_batches):
+        bt_start = batch * batch_size
+        bt_end = min(bt_start + batch_size, n_images)
+        X_batch = X[bt_start : bt_end]
+        bt_preds = sess.run(net._preds, {net._X:X_batch, net._is_training:False})
+        preds.append(bt_preds)
+
+    preds = np.concatenate(preds)
     accuracy = utils.classification_accuracy(y, preds)
     
     sess.close()
@@ -328,15 +342,14 @@ def exp_test_data():
  
     # load model
     model_fname = param._model_fname
-    net, sess = load_model(model_fname, param)
 
-    preds = sess.run(net._preds, {net._X:X_test, net._is_training:False})
-    accuracy = utils.classification_accuracy(y_test, preds)
+    #preds = sess.run(net._preds, {net._X:X_test, net._is_training:False})
+    accuracy, _ = test_model(model_fname, param, X_test, y_test)
     print('Test accuracy: ', accuracy)
     
     
 if __name__ == '__main__':
-    mode = 1
+    mode = 2
     
     if mode == 0:
         experiment()

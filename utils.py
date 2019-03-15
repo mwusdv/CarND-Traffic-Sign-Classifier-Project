@@ -11,6 +11,7 @@ import cv2
 import matplotlib.pyplot as plt
 import pickle
 
+
 # image pre-processing
 def pre_process(img):
     # histogram equalization
@@ -27,7 +28,7 @@ def pre_process(img):
     
     return o
 
-
+    
 # rotation, scale, translation, shear
 def transorm_image(img, angle_degree, scale, tx, ty, src=None, dst=None):
     n_rows, n_cols = img.shape[:2]
