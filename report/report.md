@@ -38,7 +38,7 @@ Here is an exploratory visualization of the data set. It is a bar chart showing 
 
 
 ### Design and Test a Model Architecture
-**1. Describe how you preprocessed the image data. What techniques were chosen and why did you choose these techniques? Consider including images showing the output of each preprocessing technique. Pre-processing refers to techniques such as converting to grayscale, normalization, etc. (OPTIONAL: As described in the "Stand Out Suggestions" part of the rubric, if you generated additional data for training, describe why you decided to generate additional data, how you generated the data, and provide example images of the additional data. Then describe the characteristics of the augmented training set like number of images in the set, number of images for each class, etc.)**
+**1. Pre-processing and data augmentation**
 
 * **Histogram equalization.** The first step of pre-processing is histogram equalization. This is to reduce the impact on the different intensity distributions in each image.  Here is an example of a traffic sign image before and after histogram equalization. We can see that the two original images have quite different intensity distributions. And this difference is intuitively reduced after histogram equalization.
 
@@ -55,9 +55,9 @@ Here is an exploratory visualization of the data set. It is a bar chart showing 
         ![aug_img](aug.jpg)
     
    
-2. Describe what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.) Consider including a diagram and/or table describing the final model.
+2. **Model architecture.**
 
-    My final model architecture can be best described by the parameters in my code. This format gives me much flexibility to implement the network. I was able to experiment different network architectures by just chaning the parmaeters withoug changing the code at all.
+     My final model architecture can be best described by the parameters in my code. This format gives me much flexibility to implement the network. I was able to experiment different network architectures, including the different number of layers with different parameters, by just chaning the parmaeters withoug changing the code at all.
 
     ```
     # pre-processing layers
@@ -96,72 +96,64 @@ Here is an exploratory visualization of the data set. It is a bar chart showing 
     There are three blocks of layers in my model. 
     * The first block consists of **pre-processing** layers. I didn't do grayscaling in the previous pre-processing step. Rather I choosed to do the _pixel combinations_ here and let the algorithm to choose the optimal weights.  In this block, the _kernel_ parameters consists of two integer values. The first one is the size of the convolutional kernel, while the second one is the number of kernels.
 
-    * The second block is made up of 3 convolutional layers
-Input 	32x32x3 RGB image
-Convolution 3x3 	1x1 stride, same padding, outputs 32x32x64
-RELU 	
-Max pooling 	2x2 stride, outputs 16x16x64
-Convolution 3x3 	etc.
-Fully connected 	etc.
-Softmax 	etc.
+    * The second block is made up of 3 convolutional and max-pooling layers. Here I choosed to use several kernels with different sizes within each layer. We can see that in each convolutional layer, the _kernel_ parmameter is a list, each element of which is either a two dimentional or three dimensional array. For dimensional arrays, the first value is the size of the kernel, while the second value is the number of kernels with that size. For three dimensional arrays, the first two values define the size of the kernel, and the 3rd value is the number of kernels. Namely, in addition to use square shaped kernels, I also added some rectangular shaped kernels, trying to catch information with direction bias. The outpout of all the kernels were stacked together and feeded into the next steps.
+
+    * The last block is just one fully connected layers.
+
+    For regularization, I used l2-regularizer in each layer. Plus, I used dropout in the intial pre-processing and the first convolutional layers. These are either close to the input image, or close to the final classification decision step.
 	
 	
-3. Describe how you trained your model. The discussion can include the type of optimizer, the batch size, number of epochs and any hyperparameters such as learning rate.
+3. **Trainging.** During training, I used RMPSPropOptimizer, with learning rate 0.001. The batch size was set to 512, and the number of epochs was 50.
 
-To train the model, I used an ....
-4. Describe the approach taken for finding a solution and getting the validation set accuracy to be at least 0.93. Include in the discussion the results on the training, validation and test sets and where in the code these were calculated. Your approach may have been an iterative process, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think the architecture is suitable for the current problem.
+    
+4. In order to let the model _see_ more training examples, I re-generated the augmented the data every 5 epochs. This resulted in accuracy loss first on the validation set. But when I added **batch normalization** in each layer, the result was stablized and got imporoved. 
 
-My final model results were:
+5. I trained the network for 50 epochs. In each epoch, the accuracy on the validation set is recored. And the network that corresponds to the best validation accuracy was saved as the final model. Then this model was applied on the test data.
 
-    training set accuracy of ?
-    validation set accuracy of ?
-    test set accuracy of ?
+6. My final model results were:
 
-If an iterative approach was chosen:
+    * training set accuracy of: 99.997%
+    * validation set accuracy: 99.682%
+    * test set accuracy:  98.622%
 
-    What was the first architecture that was tried and why was it chosen?
-    What were some problems with the initial architecture?
-    How was the architecture adjusted and why was it adjusted? Typical adjustments could include choosing a different model architecture, adding or taking away layers (pooling, dropout, convolution, etc), using an activation function or changing the activation function. One common justification for adjusting an architecture would be due to overfitting or underfitting. A high accuracy on the training set but low accuracy on the validation set indicates over fitting; a low accuracy on both sets indicates under fitting.
-    Which parameters were tuned? How were they adjusted and why?
-    What are some of the important design choices and why were they chosen? For example, why might a convolution layer work well with this problem? How might a dropout layer help with creating a successful model?
 
-If a well known architecture was chosen:
 
-    What architecture was chosen?
-    Why did you believe it would be relevant to the traffic sign application?
-    How does the final model's accuracy on the training, validation and test set provide evidence that the model is working well?
+7. The Googlenet is a well known architecture where kenerls with different sizes are applied in the same convolutional layers. Here I just borrowed this idea of combining the the kernels with different sizes and implemented and my network, which has a much less complicated design than the Googlenet
 
-Test a Model on New Images
-1. Choose five German traffic signs found on the web and provide them in the report. For each image, discuss what quality or qualities might be difficult to classify.
+   
+### Test a Model on New Images
+1. I downloaed 10 German traffic sign images from web. Then I resized them to be 32*32. Here are these 10 images with their class labels.
+ ![web-images](web-images.jpg)
+The first and the eighth (class 4) images have some backgournds, and the last one has some rotations and shearing. So they might not be easy to classify. 
 
-Here are five German traffic signs that I found on the web:
+2. However, as can be seen in the notebook, my model classifed all these 10 images correctly. 
 
-alt text alt text alt text alt text alt text
+3. To check how certain the model is when predicting on each of the 10 new images, we can look at the softmax probabilities for each prediction. Here the top 3 softmax probabilities for each image along with the sign class of each probability is provided.
 
-The first image might be difficult to classify because ...
-2. Discuss the model's predictions on these new traffic signs and compare the results to predicting on the test set. At a minimum, discuss what the predictions were, the accuracy on these new predictions, and compare the accuracy to the accuracy on the test set (OPTIONAL: Discuss the results in more detail as described in the "Stand Out Suggestions" part of the rubric).
-
-Here are the results of the prediction:
-Image 	Prediction
-Stop Sign 	Stop sign
-U-turn 	U-turn
-Yield 	Yield
-100 km/h 	Bumpy Road
-Slippery Road 	Slippery Road
-
-The model was able to correctly guess 4 of the 5 traffic signs, which gives an accuracy of 80%. This compares favorably to the accuracy on the test set of ...
-3. Describe how certain the model is when predicting on each of the five new images by looking at the softmax probabilities for each prediction. Provide the top 5 softmax probabilities for each image along with the sign type of each probability. (OPTIONAL: as described in the "Stand Out Suggestions" part of the rubric, visualizations can also be provided such as bar charts)
-
-The code for making predictions on my final model is located in the 11th cell of the Ipython notebook.
-
-For the first image, the model is relatively sure that this is a stop sign (probability of 0.6), and the image does contain a stop sign. The top five soft max probabilities were
-Probability 	Prediction
-.60 	Stop sign
-.20 	U-turn
-.05 	Yield
-.04 	Bumpy Road
-.01 	Slippery Road
-
-For the second image ...
-(Optional) Visualizing the Neural Network (See Step 4 of the Ipython notebook for more details)
-1. Discuss the visual output of your trained network's feature maps. What characteristics did the neural network use to make classifications?
+    The code for making predictions and calculating the top softmax probabilities are located in the 14th and the 15th cells of the Ipython notebook respectively.
+    ```
+      ([[9.9995220e-01, 4.7800560e-05, 2.3342344e-09],
+       [1.0000000e+00, 6.6465400e-30, 2.5344827e-36],
+       [1.0000000e+00, 0.0000000e+00, 0.0000000e+00],
+       [9.9999964e-01, 3.4313572e-07, 2.7760066e-10],
+       [1.0000000e+00, 0.0000000e+00, 0.0000000e+00],
+       [1.0000000e+00, 0.0000000e+00, 0.0000000e+00],
+       [1.0000000e+00, 0.0000000e+00, 0.0000000e+00],
+       [1.0000000e+00, 1.1023785e-36, 0.0000000e+00],
+       [1.0000000e+00, 0.0000000e+00, 0.0000000e+00],
+       [1.0000000e+00, 1.0230324e-20, 7.4287592e-24]], dtype=float32),
+        indices=array([
+       [28, 24, 30],
+       [24, 35, 18],
+       [36,  0,  1],
+       [38, 34, 40],
+       [11,  0,  1],
+       [25,  0,  1],
+       [14,  0,  1],
+       [ 4,  0,  1],
+       [17,  0,  1],
+       [31, 17, 25]], dtype=int32))
+     
+     Labels:  [28 24 36 38 11 25 14  4 17 31]
+    ```
+    From the above numbers, it can be seen the model correctly classify each of the 10 images with very high certainty.
