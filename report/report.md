@@ -54,7 +54,7 @@ Here is an exploratory visualization of the data set. It is a bar chart showing 
    
 2. **Model architecture.**
 
-     My final model architecture can be best described by the parameters in my code. I designed this format of parameters, because it gave me much flexibility to implement the network. I was able to experiment different network architectures, including the different number of layers with different parameters, by just chaning the parmaeters without changing the code itself.
+     My final model architecture can be best described by the parameters in my code. I tried several ways to specify parameters. And finally I came up this one because it gave me much flexibility to implement the network. I was able to experiment different network architectures, including the different number of layers with different parameters, by just chaning the parmaeters without changing the code at all.
 
     ```
     # pre-processing layers
